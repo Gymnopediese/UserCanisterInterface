@@ -1,63 +1,68 @@
 const express = require('express');
-// const { getWhoAmI } = require('./whoamiModule'); // Replace with correct path
 const fs = require('fs');
 const path = require('path');
 const app = express();
-const { CandidLexer, CandidParser } = require("../node_modules/candid-js/src/parser");
-
-const lexer = new CandidLexer();
-const parser = new CandidParser();
 
 const port = 3000;
 const { exec } = require('child_process');
 const candid = require('candid-js');
 
-// function ress (error, result)  {
-//     if (error) {
-//         res.status(500).send('Error retrieving whoami data');
-//         return;
-//     }
-//     res.send(result)
-// }
+get_routes = [
+    {
+        route: '/getName',
+        command: 'reboot_getName',
+    },
+    {
+        route: '/isAlive',
+        command: 'reboot_isAlive',
+    },
+    {
+        route: '/getFriends',
+        command: 'reboot_user_getFriends',
+    },
+    {
+        route: '/getFriendRequests',
+        command: 'reboot_user_getFriendRequests',
+    },
+]
 
-app.get('/getName', (req, res) => {
-    exec('dfx canister call alex reboot_getName --ic', (error, stdout, stderr) => {
-        if (error) {
-            res.status(500).send('Error retrieving whoami data');
-            return;
-        }
-        res.send(stdout.trim())
-    });
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use(express.static('public'));
 
+function dfx(command, func, args= "")
+{
+    if (args != "")
+        args = `'(${args})'`
+    command = `dfx canister call alex ${command} ${args} --ic --output json`
+    console.log(command);
+    exec(command, func);
+}
+
+for (const route of get_routes) {
+    app.get(route.route, (req, res) => {
+        dfx(route.command, (error, stdout, stderr) => {
+            if (error) {
+                res.status(500).send('Error retrieving data');
+                return;
+            }
+            res.send(stdout.trim())
+        });
+    });
+}
+
+
 app.post('/dailyCheck', (req, res) => {
-
-    var mood = req.body.mood;
-    var command = 'dfx canister call alex reboot_dailyCheck \'("' + mood + '")\' --ic';
-    exec(command, (error, stdout, stderr) => {
+    dfx("reboot_user_dailyCheck", (error, stdout, stderr) => {
         if (error) {
             res.status(500).send('Error retrieving whoami data');
             return;
         }
-        res.send(candid.transpile(stdout.trim(), "json"))
-    });
+        res.send(stdout.trim());
+    }, `"${req.body.mood}"`);
 });
 
-app.get('/isAlive', (req, res) => {
-    exec('dfx canister call alex reboot_isAlive --ic', (error, stdout, stderr) => {
-        if (error) {
-            res.status(500).send('Error retrieving whoami data');
-            return;
-        }
-
-        res.send(candid.transpile(stdout.trim(), "json").stringify())
-    });
-});
 
 app.get('/', (req, res) => {
     const filePath = path.join(__dirname, '../public', 'index.html');
@@ -71,43 +76,30 @@ app.get('/', (req, res) => {
     });
 });
 
-app.get('/getFriends', (req, res) => {
-    exec('dfx canister call alex reboot_friends_getFriends --ic --output json', (error, stdout, stderr) => {
-        if (error) {
-            res.status(500).send('Error retrieving whoami data');
+app.get('/chat', (req, res) => {
+    console.log(req.query)
+    const filePath = path.join(__dirname, '../public', 'chat.html');
+    console.log(filePath)
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).send('Error reading index.html');
             return;
         }
-        stdout = stdout.trim();
-        res.send(stdout);
-    });
-});
-
-app.get('/getFriendRequests', (req, res) => {
-    exec('dfx canister call alex reboot_friends_getFriendRequests --ic --output json', (error, stdout, stderr) => {
-        if (error) {
-            res.status(500).send('Error retrieving whoami data');
-            return;
-        }
-        res.send(stdout.trim())
+        res.send(data);
     });
 });
 
 app.post('/handleFriendRequest', (req, res) => {
-
     var id = req.body.id;
     var accept = req.body.accept;
-
-    exec(`dfx canister call alex reboot_friends_handleFriendRequest '(${id}, ${accept})' --ic`, (error, stdout, stderr) => {
+    dfx(`reboot_user_handleFriendRequest`, (error, stdout, stderr) => {
         if (error) {
             res.status(500).send('Error retrieving whoami data');
             return;
         }
         res.send(stdout.trim())
-    });
+    },  `${id}, ${accept}`);
 });
-
-
-
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
