@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Who Am I</title>
+        <style>
+            body {
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #2e3b4e;
+                color: #fff;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+    
+            h1, h2 {
+                margin: 10px 0;
+            }
+    
+            h1 {
+                font-size: 2.5rem;
+                color: #ff6f61;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+    
+            h2 {
+                font-size: 1.5rem;
+                color: #ffd700;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            }
+    
+            #board {
+                background-color: #1e2a38;
+                border: 1px solid #ff6f61;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                margin-top: 20px;
+                width: 80%;
+                max-width: 800px;
+                color: #fff;
+            }
+    
+            input[type="text"] {
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                margin-bottom: 10px;
+                width: calc(100% - 24px);
+                max-width: 400px;
+            }
+    
+            button {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                background-color: #ff6f61;
+                color: #fff;
+                font-size: 1rem;
+                cursor: pointer;
+                margin: 5px;
+                transition: background-color 0.3s;
+            }
+    
+            button:hover {
+                background-color: #e65b50;
+            }
+    
+            p {
+                margin: 10px 0;
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+        </style>
+    </head>
+<body>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+    <h1 id="whoami">Loading...</h1>
+    <h2 id="fiends">Loading...</h2>
+    <h2 id="fiendrequests">Loading...</h2>
+    <script>
+        fetch('/getName')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('whoami').textContent = `\n ${data}`;
+            })
+            .catch(error => {
+                document.getElementById('whoami').textContent = 'Error retrieving data';
+            });
+
+        function get_friends()
+        {
+            fetch('/getFriends')
+            .then(response => response.text())
+            .then(data => {
+                data = JSON.parse(data);
+                document.getElementById('fiends').innerHTML  = ""
+                for (var i = 0; i < data.length; i++) {
+                    console.log(data[i]);
+                    document.getElementById('fiends').innerHTML += `friend: \n ${data[i].name}<br>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('fiends').textContent = 'Error retrieving data';
+            });
+        }
+
+        function get_friends_request()
+        {
+            fetch('/getFriendRequests')
+            .then(response => response.text())
+            .then(data => {
+                data = JSON.parse(data);
+                console.log(data)
+                document.getElementById('fiendrequests').innerHTML  = ""
+                for (var i = 0; i < data.length; i++) {
+                    
+                    document.getElementById('fiendrequests').innerHTML += `
+                    friend: \n ${data[i].name}
+                    <button onClick="acceptFriendRequest(${i}, true)">yes<button\\>
+                    <button onClick="acceptFriendRequest(${i}, false)">no<button\\>
+                    <br>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('fiendrequests').textContent = 'Error retrieving data';
+            });
+        }
+        get_friends_request()
+        get_friends()
+
+            
+
+        function set_the_board()
+        {
+            fetch ("https://q3gy3-sqaaa-aaaas-aaajq-cai.raw.icp0.io/").then((response) => {
+                return response.text();
+            }).then((data) => {
+                document.getElementById('board').innerHTML = data.replaceAll("\n", "<br>");
+            }).catch((error) => {
+                document.getElementById('board').textContent = '';
+            });
+        }
+
+        function dailyCheck()
+        {
+
+            var text_field = document.getElementById('mood');
+
+            fetch('/dailyCheck', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({'mood': text_field.value})
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('whoami').textContent = `Is User Alive: ${data.replace('("', "").replace('")', "")}`;
+                set_the_board();
+            })
+            .catch(error => {
+                document.getElementById('whoami').textContent = 'Error retrieving data';
+            });
+        }
+
+        function acceptFriendRequest(id, accept)
+        {
+
+            var text_field = document.getElementById('mood');
+
+            fetch('/handleFriendRequest', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({'id': id, 'accept': accept})
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('whoami').textContent = `Is User Alive: ${data.replace('("', "").replace('")', "")}`;
+            })
+            .catch(error => {
+                document.getElementById('whoami').textContent = 'Error retrieving data';
+            });
+        }
+        set_the_board();
+    </script>
+
+
+    <input type="text" id="mood" placeholder="Enter your mood">
+    <button onclick="dailyCheck()">Daily Check</button>
+
+    <h2>Board</h2>
+
+    <p id="board"></p>
+</body>
+</html>
